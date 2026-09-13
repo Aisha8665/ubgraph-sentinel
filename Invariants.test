@@ -1,0 +1,25 @@
+import { checkMonotonic, checkPrefixSum } from "../src/invariants.js";
+import type { PoolSnapshot } from "../src/messari.js";
+
+const mk = (i: number, daily: string, cum: string): PoolSnapshot => ({
+  id: `0xpool-${i}`, timestamp: String(1700000000 + i * 86400), blockNumber: String(1000 + i),
+  dailyVolumeUSD: daily, cumulativeVolumeUSD: cum,
+  dailySupplySideRevenueUSD: "0", cumulativeSupplySideRevenueUSD: "0",
+  dailyProtocolSideRevenueUSD: "0", cumulativeProtocolSideRevenueUSD: "0",
+  dailyTotalRevenueUSD: "0", cumulativeTotalRevenueUSD: "0",
+});
+
+// Clean series: daily 100 each day, cumulative accumulates correctly.
+const clean = [mk(0,"100","100"), mk(1,"100","200"), mk(2,"100","300")];
+console.log("clean monotonic  ->", checkMonotonic(clean, 0, "cumulativeVolumeUSD", "p") === null ? "pass" : "FAIL");
+console.log("clean prefix-sum ->", checkPrefixSum(clean, 2, {daily:"dailyVolumeUSD",cumulative:"cumulativeVolumeUSD"}, "p") === null ? "pass" : "FAIL");
+
+// Cumulative goes backwards between day 1 and day 2.
+const back = [mk(0,"100","100"), mk(1,"100","200"), mk(2,"100","150")];
+const v1 = checkMonotonic(back, 1, "cumulativeVolumeUSD", "p");
+console.log("regression caught ->", v1 ? "pass" : "FAIL", v1?.observed.delta);
+
+// Daily series stops rolling into cumulative on day 2.
+const drift = [mk(0,"100","100"), mk(1,"100","200"), mk(2,"100","250")];
+const v2 = checkPrefixSum(drift, 2, {daily:"dailyVolumeUSD",cumulative:"cumulativeVolumeUSD"}, "p");
+console.log("drift caught      ->", v2 ? "pass" : "FAIL", v2?.observed.summedDaily, "vs", v2?.observed.claimedCumulative);
