@@ -1,0 +1,29 @@
+{
+  "name": "subgraph-sentinel",
+  "version": "0.1.0",
+  "description": "Property-based integrity verification for live subgraph deployments on The Graph",
+  "type": "module",
+  "bin": {
+    "sentinel": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "audit": "tsx src/cli.ts",
+    "mcp": "tsx src/mcp.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "fast-check": "^3.23.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}
