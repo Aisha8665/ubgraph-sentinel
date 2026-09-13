@@ -1,0 +1,32 @@
+import { auditSeries } from "../src/runner.js";
+import type { PoolSnapshot } from "../src/messari.js";
+
+const mk = (i: number, daily: number, cum: number): PoolSnapshot => ({
+  id: `0xpool-${String(i).padStart(4,"0")}`, timestamp: String(1700000000 + i*86400), blockNumber: String(1000+i),
+  dailyVolumeUSD: String(daily), cumulativeVolumeUSD: String(cum),
+  dailySupplySideRevenueUSD: "0", cumulativeSupplySideRevenueUSD: "0",
+  dailyProtocolSideRevenueUSD: "0", cumulativeProtocolSideRevenueUSD: "0",
+  dailyTotalRevenueUSD: "0", cumulativeTotalRevenueUSD: "0",
+});
+
+// 900 days. Cumulative goes backwards at day 300, then AGAIN at day 700.
+// The earliest offender is 300; a naive random search would report either.
+const rows: PoolSnapshot[] = [];
+let cum = 0;
+for (let i = 0; i < 900; i++) {
+  cum += 1000;
+  if (i === 300 || i === 700) cum -= 5000;
+  rows.push(mk(i, 1000, cum));
+}
+
+const found = auditSeries(rows, "0xdeadbeef", { pools: 1, runs: 400, tolerance: 1e-6 });
+const mono = found.filter(v => v.invariant === "monotonic");
+console.log("violations found:", found.length);
+for (const v of mono) {
+  console.log(`  ${v.field}: block ${v.observed.fromBlock} -> ${v.observed.toBlock}, delta ${v.observed.delta}`);
+}
+const earliest = mono.find(v => v.field === "cumulativeVolumeUSD");
+console.log("shrank to earliest (block 1299->1300)?", earliest?.observed.fromBlock === "1299" ? "YES" : "NO, got " + earliest?.observed.fromBlock);
+
+const prefix = found.filter(v => v.invariant === "prefix-sum");
+console.log("prefix-sum divergence day:", prefix[0]?.observed.days, "(expect 302 = first day after the day-300 drop)");
